@@ -1,0 +1,28 @@
+{
+  "name": "qwen-3-coder-proxy",
+  "version": "1.0.0",
+  "description": "A proxy server for routing between Cerebras and Chutes for Qwen-3-Coder",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "proxy",
+    "cerebras",
+    "chutes",
+    "qwen-3-coder",
+    "openai"
+  ],
+  "author": "Proxy Developer",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
