@@ -45,31 +45,53 @@ router.post('/chat/completions', async (req, res) => {
       return res.status(400).json({ error: `Model ${req.body.model} not supported` });
     }
     
+    // Check if this is a streaming request
+    const isStreaming = req.body.stream === true;
+    
     // Log request details
-    logger.info('Processing chat completion request', { 
+    logger.info('Processing chat completion request', {
       model: req.body.model,
-      messagesCount: req.body.messages ? req.body.messages.length : 0
+      messagesCount: req.body.messages ? req.body.messages.length : 0,
+      isStreaming
     });
     
-    // Route the request
-    const result = await providerRouter.routeChatCompletion(req.body);
-    
-    // If successful, track the usage
-    if (result.status === 200 && result.provider === 'cerebras') {
-      // Estimate token count (simplified)
-      const tokenCount = req.body.max_tokens || 100;
-      rateLimitMonitor.addRequest(tokenCount);
-      logger.info('Added request to rate limit monitor', { tokenCount });
+    if (isStreaming) {
+      // Handle streaming request
+      await providerRouter.routeStreamingChatCompletion(req.body, res);
+    } else {
+      // Handle regular request
+      const result = await providerRouter.routeChatCompletion(req.body);
+      
+      // If successful, track the usage
+      if (result.status === 200 && result.provider === 'cerebras') {
+        // Estimate token count (simplified)
+        const tokenCount = req.body.max_tokens || 100;
+        rateLimitMonitor.addRequest(tokenCount);
+        logger.info('Added request to rate limit monitor', { tokenCount });
+      }
+      
+      // Return the response from the provider
+      logger.info('Returning response from provider', {
+        provider: result.provider,
+        status: result.status,
+        choicesCount: result.response.choices ? result.response.choices.length : 0
+      });
+      
+      // Log details about the first choice if it exists
+      if (result.response.choices && result.response.choices.length > 0) {
+        const firstChoice = result.response.choices[0];
+        logger.debug('First choice in response', {
+          hasMessage: !!firstChoice.message,
+          messageRole: firstChoice.message ? firstChoice.message.role : null,
+          hasContent: !!(firstChoice.message && firstChoice.message.content),
+          contentLength: firstChoice.message && firstChoice.message.content ? firstChoice.message.content.length : 0
+        });
+      }
+      
+      res.status(result.status).json(result.response);
     }
-    
-    // Return the response from the provider
-    logger.info('Returning response from provider', { 
-      provider: result.provider,
-      status: result.status
-    });
-    res.status(result.status).json(result.response);
   } catch (error) {
-    logger.error('Error processing chat completion', { 
+    logger.error('Error processing chat completion', {
       error: error.message,
       stack: error.stack
     });
@@ -83,8 +105,8 @@ router.post('/chat/completions', async (req, res) => {
     // Handle other errors
     if (error.response) {
       // Forward the error response from the provider
-      logger.info('Forwarding provider error response', { 
-        status: error.response.status 
+      logger.info('Forwarding provider error response', {
+        status: error.response.status
       });
       res.status(error.response.status).json(error.response.data);
     } else {

@@ -34,7 +34,7 @@ class ProviderRouter {
   async routeChatCompletion(requestBody) {
     const provider = this.selectProvider();
     const providerModel = this.modelMapper.mapToProviderModel(
-      requestBody.model, 
+      requestBody.model,
       provider
     );
     
@@ -44,17 +44,17 @@ class ProviderRouter {
     
     // Update the request body for the specific provider
     const modifiedRequestBody = this.adaptRequestForProvider(
-      requestBody, 
+      requestBody,
       provider
     );
     
     // Update the model in the request body
     modifiedRequestBody.model = providerModel;
     
-    logger.info('Routing request', { 
-      provider, 
+    logger.info('Routing request', {
+      provider,
       model: requestBody.model,
-      providerModel 
+      providerModel
     });
     
     // Route to the selected provider
@@ -62,6 +62,41 @@ class ProviderRouter {
       return await this.sendToCerebras(modifiedRequestBody);
     } else {
       return await this.sendToChutes(modifiedRequestBody);
+    }
+  }
+  
+  // Route a streaming chat completion request to the appropriate provider
+  async routeStreamingChatCompletion(requestBody, clientRes) {
+    const provider = this.selectProvider();
+    const providerModel = this.modelMapper.mapToProviderModel(
+      requestBody.model,
+      provider
+    );
+    
+    if (!providerModel) {
+      throw new Error(`Model ${requestBody.model} not supported for provider ${provider}`);
+    }
+    
+    // Update the request body for the specific provider
+    const modifiedRequestBody = this.adaptRequestForProvider(
+      requestBody,
+      provider
+    );
+    
+    // Update the model in the request body
+    modifiedRequestBody.model = providerModel;
+    
+    logger.info('Routing streaming request', {
+      provider,
+      model: requestBody.model,
+      providerModel
+    });
+    
+    // Route to the selected provider
+    if (provider === 'cerebras') {
+      return await this.sendStreamingToCerebras(modifiedRequestBody, clientRes);
+    } else {
+      return await this.sendStreamingToChutes(modifiedRequestBody, clientRes);
     }
   }
 
@@ -101,6 +136,24 @@ class ProviderRouter {
       // No specific adaptations needed at the moment
     }
     
+    // Validate response structure
+    if (!response.choices || !Array.isArray(response.choices)) {
+      logger.warn('Response missing choices array', { provider, responseKeys: Object.keys(response) });
+      response.choices = []; // Ensure we have a choices array
+    }
+    
+    // Validate each choice has a message with content
+    for (let i = 0; i < response.choices.length; i++) {
+      const choice = response.choices[i];
+      if (!choice.message) {
+        logger.warn('Choice missing message', { provider, choiceIndex: i, choiceKeys: Object.keys(choice) });
+        choice.message = { role: 'assistant', content: '' }; // Ensure we have a message
+      } else if (choice.message.content === undefined) {
+        logger.warn('Message missing content', { provider, choiceIndex: i });
+        choice.message.content = ''; // Ensure message has content
+      }
+    }
+    
     // Log function calling related response data
     if (response.choices && response.choices.length > 0) {
       const choice = response.choices[0];
@@ -133,16 +186,28 @@ class ProviderRouter {
         timeout: config.requestTimeout
       });
       
-      logger.info('Received response from Cerebras', { 
+      logger.info('Received response from Cerebras', {
         status: response.status,
         statusText: response.statusText,
-        hasToolCalls: response.data.choices && response.data.choices[0] && 
-                      response.data.choices[0].message && 
+        hasToolCalls: response.data.choices && response.data.choices[0] &&
+                      response.data.choices[0].message &&
                       !!response.data.choices[0].message.tool_calls,
-        hasFunctionCall: response.data.choices && response.data.choices[0] && 
-                         response.data.choices[0].message && 
-                         !!response.data.choices[0].message.function_call
+        hasFunctionCall: response.data.choices && response.data.choices[0] &&
+                         response.data.choices[0].message &&
+                         !!response.data.choices[0].message.function_call,
+        choicesCount: response.data.choices ? response.data.choices.length : 0
       });
+      
+      // Log the full response for debugging (first choice only)
+      if (response.data.choices && response.data.choices.length > 0) {
+        const firstChoice = response.data.choices[0];
+        logger.debug('First choice content', {
+          hasMessage: !!firstChoice.message,
+          messageRole: firstChoice.message ? firstChoice.message.role : null,
+          messageContent: firstChoice.message ? firstChoice.message.content : null,
+          hasContent: !!(firstChoice.message && firstChoice.message.content)
+        });
+      }
       
       // Check if we got a rate limit error
       if (response.status === 429) {
@@ -182,7 +247,7 @@ class ProviderRouter {
   // Send request to Chutes
   async sendToChutes(requestBody) {
     try {
-      logger.info('Sending request to Chutes', { 
+      logger.info('Sending request to Chutes', {
         endpoint: config.endpoints.chutes,
         hasTools: !!requestBody.tools,
         hasFunctions: !!requestBody.functions
@@ -196,16 +261,28 @@ class ProviderRouter {
         timeout: config.requestTimeout
       });
       
-      logger.info('Received response from Chutes', { 
+      logger.info('Received response from Chutes', {
         status: response.status,
         statusText: response.statusText,
-        hasToolCalls: response.data.choices && response.data.choices[0] && 
-                      response.data.choices[0].message && 
+        hasToolCalls: response.data.choices && response.data.choices[0] &&
+                      response.data.choices[0].message &&
                       !!response.data.choices[0].message.tool_calls,
-        hasFunctionCall: response.data.choices && response.data.choices[0] && 
-                         response.data.choices[0].message && 
-                         !!response.data.choices[0].message.function_call
+        hasFunctionCall: response.data.choices && response.data.choices[0] &&
+                         response.data.choices[0].message &&
+                         !!response.data.choices[0].message.function_call,
+        choicesCount: response.data.choices ? response.data.choices.length : 0
       });
+      
+      // Log the full response for debugging (first choice only)
+      if (response.data.choices && response.data.choices.length > 0) {
+        const firstChoice = response.data.choices[0];
+        logger.debug('First choice content', {
+          hasMessage: !!firstChoice.message,
+          messageRole: firstChoice.message ? firstChoice.message.role : null,
+          messageContent: firstChoice.message ? firstChoice.message.content : null,
+          hasContent: !!(firstChoice.message && firstChoice.message.content)
+        });
+      }
       
       // Adapt the response
       const adaptedResponse = this.adaptResponseFromProvider(response.data, 'chutes');
@@ -216,7 +293,7 @@ class ProviderRouter {
         status: response.status
       };
     } catch (error) {
-      logger.error('Error sending request to Chutes', { 
+      logger.error('Error sending request to Chutes', {
         error: error.message,
         response: error.response ? {
           status: error.response.status,
@@ -226,6 +303,142 @@ class ProviderRouter {
       });
       
       throw error;
+    }
+  }
+  
+  // Send streaming request to Cerebras
+  async sendStreamingToCerebras(requestBody, clientRes) {
+    try {
+      logger.info('Sending streaming request to Cerebras', {
+        endpoint: config.endpoints.cerebras,
+        hasTools: !!requestBody.tools,
+        hasFunctions: !!requestBody.functions
+      });
+      
+      // Set appropriate headers for streaming response
+      clientRes.setHeader('Content-Type', 'text/event-stream');
+      clientRes.setHeader('Cache-Control', 'no-cache');
+      clientRes.setHeader('Connection', 'keep-alive');
+      
+      // Use axios with response type stream
+      const response = await axios.post(config.endpoints.cerebras, requestBody, {
+        headers: {
+          'Authorization': `Bearer ${config.cerebrasApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: config.requestTimeout,
+        responseType: 'stream'
+      });
+      
+      logger.info('Received streaming response from Cerebras', {
+        status: response.status,
+        statusText: response.statusText
+      });
+      
+      // Check if we got a rate limit error (non-streaming error response)
+      if (response.status === 429) {
+        logger.warn('Cerebras rate limit exceeded');
+        this.rateLimitMonitor.setCooldown();
+        clientRes.status(429).json({ error: 'Rate limit exceeded' });
+        return;
+      }
+      
+      // Pipe the streaming response to the client
+      response.data.pipe(clientRes);
+      
+      // Handle rate limiting after the stream completes
+      response.data.on('end', () => {
+        logger.info('Streaming response completed');
+        // We can't accurately track token usage for streaming responses
+        // But we can track the request itself
+        this.rateLimitMonitor.addRequest(100); // Estimate
+      });
+      
+      // Handle errors in the stream
+      response.data.on('error', (error) => {
+        logger.error('Error in streaming response from Cerebras', { error: error.message });
+        if (!clientRes.headersSent) {
+          clientRes.status(500).json({ error: 'Internal server error' });
+        }
+      });
+    } catch (error) {
+      logger.error('Error sending streaming request to Cerebras', {
+        error: error.message,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        } : null
+      });
+      
+      // If it's a rate limit error, set cooldown
+      if (error.response && error.response.status === 429) {
+        logger.warn('Setting cooldown due to Cerebras rate limit');
+        this.rateLimitMonitor.setCooldown();
+        if (!clientRes.headersSent) {
+          clientRes.status(429).json({ error: 'Rate limit exceeded' });
+        }
+        return;
+      }
+      
+      if (!clientRes.headersSent) {
+        clientRes.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  }
+  
+  // Send streaming request to Chutes
+  async sendStreamingToChutes(requestBody, clientRes) {
+    try {
+      logger.info('Sending streaming request to Chutes', {
+        endpoint: config.endpoints.chutes,
+        hasTools: !!requestBody.tools,
+        hasFunctions: !!requestBody.functions
+      });
+      
+      // Set appropriate headers for streaming response
+      clientRes.setHeader('Content-Type', 'text/event-stream');
+      clientRes.setHeader('Cache-Control', 'no-cache');
+      clientRes.setHeader('Connection', 'keep-alive');
+      
+      // Use axios with response type stream
+      const response = await axios.post(config.endpoints.chutes, requestBody, {
+        headers: {
+          'Authorization': `Bearer ${config.chutesApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: config.requestTimeout,
+        responseType: 'stream'
+      });
+      
+      logger.info('Received streaming response from Chutes', {
+        status: response.status,
+        statusText: response.statusText
+      });
+      
+      // Pipe the streaming response to the client
+      response.data.pipe(clientRes);
+      
+      // Handle errors in the stream
+      response.data.on('error', (error) => {
+        logger.error('Error in streaming response from Chutes', { error: error.message });
+        if (!clientRes.headersSent) {
+          clientRes.status(500).json({ error: 'Internal server error' });
+        }
+      });
+    } catch (error) {
+      logger.error('Error sending streaming request to Chutes', {
+        error: error.message,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        } : null
+      });
+      
+      if (!clientRes.headersSent) {
+        clientRes.status(500).json({ error: 'Internal server error' });
+      }
     }
   }
 }
