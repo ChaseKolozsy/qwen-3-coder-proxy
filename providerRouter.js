@@ -225,12 +225,12 @@ class ProviderRouter {
         status: response.status
       };
     } catch (error) {
-      logger.error('Error sending request to Cerebras', { 
+      logger.error('Error sending request to Cerebras', {
         error: error.message,
         response: error.response ? {
           status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data
+          statusText: error.response.statusText
+          // Note: Not including error.response.data to avoid circular references
         } : null
       });
       
@@ -297,8 +297,8 @@ class ProviderRouter {
         error: error.message,
         response: error.response ? {
           status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data
+          statusText: error.response.statusText
+          // Note: Not including error.response.data to avoid circular references
         } : null
       });
       
@@ -366,8 +366,8 @@ class ProviderRouter {
         error: error.message,
         response: error.response ? {
           status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data
+          statusText: error.response.statusText
+          // Note: Not including error.response.data to avoid circular references
         } : null
       });
       
@@ -431,8 +431,8 @@ class ProviderRouter {
         error: error.message,
         response: error.response ? {
           status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data
+          statusText: error.response.statusText
+          // Note: Not including error.response.data to avoid circular references
         } : null
       });
       

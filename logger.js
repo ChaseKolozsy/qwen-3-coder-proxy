@@ -27,10 +27,32 @@ class Logger {
       };
       
       if (data) {
-        logEntry.data = data;
+        // Safely serialize data to avoid circular reference errors
+        try {
+          logEntry.data = data;
+          console.log(JSON.stringify(logEntry));
+        } catch (serializeError) {
+          // If serialization fails due to circular references,
+          // create a simplified version of the data
+          const simplifiedData = {};
+          for (const key in data) {
+            if (data.hasOwnProperty(key)) {
+              try {
+                // Try to serialize each property individually
+                JSON.stringify(data[key]);
+                simplifiedData[key] = data[key];
+              } catch (propError) {
+                // If a property can't be serialized, use its string representation
+                simplifiedData[key] = String(data[key]);
+              }
+            }
+          }
+          logEntry.data = simplifiedData;
+          console.log(JSON.stringify(logEntry));
+        }
+      } else {
+        console.log(JSON.stringify(logEntry));
       }
-      
-      console.log(JSON.stringify(logEntry));
     }
   }
 
