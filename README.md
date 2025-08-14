@@ -78,6 +78,30 @@ REQUEST_TIMEOUT=30000
 
 2. The server will start on the configured port (default: 3000)
 
+## OpenAI-Compatible Base URL
+
+To use this proxy with OpenAI-compatible tools (like roocode), set the base URL to:
+```
+http://localhost:3000/v1
+```
+
+For example, with roocode or other tools that support custom OpenAI endpoints:
+- **Base URL**: `http://localhost:3000/v1`
+- **API Key**: Any non-empty string (the proxy doesn't validate the API key)
+- **Model**: `qwen-3-coder`
+
+### Example Configuration for roocode
+
+In your roocode configuration, set:
+```json
+{
+  "baseUrl": "http://localhost:3000/v1",
+  "model": "qwen-3-coder"
+}
+```
+
+Note: The API key can be any value as the proxy doesn't validate it, but it must be provided as some tools require it.
+
 ## API Endpoints
 
 The proxy provides OpenAI-compatible endpoints:
