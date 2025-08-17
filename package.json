@@ -16,7 +16,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/neweyesiss/qwen-3-coder-proxy.git"
+    "url": "git+https://github.com/neweyesiss/qwen-3-coder-proxy.git"
   },
   "keywords": [
     "proxy",
