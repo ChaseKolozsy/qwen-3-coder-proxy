@@ -1,0 +1,59 @@
+# Environment variables (sensitive)
+.env
+
+# Logs
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Build outputs
+dist/
+build/
+
+# Cache directories
+.cache/
+.next/
+.nuxt/
+.vuepress/dist/
+.serverless/
+.fusebox/
+.dynamodb/
+.grunt/
+lib-cov/
+jspm_packages/
+typings/
+*.tsbuildinfo
+.npm
+.eslintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.node_repl_history
+*.tgz
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+.vscode-test/
+.tern-port
+
+# IDE files
+.vscode/
+
+# macOS specific
+.DS_Store
