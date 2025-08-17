@@ -1,6 +1,6 @@
 {
   "name": "qwen-3-coder-proxy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A proxy server for routing between Cerebras and Chutes for Qwen-3-Coder",
   "main": "index.js",
   "files": [
