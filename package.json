@@ -31,6 +31,10 @@
     "url": "https://github.com/neweyesiss/qwen-3-coder-proxy/issues"
   },
   "homepage": "https://github.com/neweyesiss/qwen-3-coder-proxy#readme",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.6.0",
