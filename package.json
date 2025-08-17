@@ -3,9 +3,20 @@
   "version": "1.0.0",
   "description": "A proxy server for routing between Cerebras and Chutes for Qwen-3-Coder",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+  "files": [
+    "index.js",
+    "config.js",
+    "logger.js",
+    "modelMapper.js",
+    "providerRouter.js",
+    "rateLimitMonitor.js",
+    "routes/",
+    ".env.example",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neweyesiss/qwen-3-coder-proxy.git"
   },
   "keywords": [
     "proxy",
@@ -16,6 +27,10 @@
   ],
   "author": "Proxy Developer",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/neweyesiss/qwen-3-coder-proxy/issues"
+  },
+  "homepage": "https://github.com/neweyesiss/qwen-3-coder-proxy#readme",
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.6.0",
